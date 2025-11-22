@@ -1,4 +1,4 @@
-/*
+/* 
  * This file is part of the VanitySearch distribution (https://github.com/JeanLucPons/VanitySearch).
  * Copyright (c) 2019 Jean Luc PONS.
  *
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 #include "Timer.h"
 #include "Vanity.h"
@@ -24,6 +24,24 @@
 #include <stdexcept>
 #include "hash/sha512.h"
 #include "hash/sha256.h"
+/* -----------------------------------------------------------------------
+ * Colour definitions for improved CLI output.  These ANSI escape codes
+ * provide colourised and emphasised text on capable terminals.  If the
+ * output device does not support ANSI colours, these codes will be
+ * ignored by the terminal and the text will render plainly.
+ *
+ * Colours are used throughout this file for headings, usage messages and
+ * error reporting to make the output easier to read.  Feel free to tweak
+ * or extend these definitions as needed.
+ */
+#define CLR_RESET   "\033[0m"
+#define CLR_BOLD    "\033[1m"
+#define CLR_RED     "\033[31m"
+#define CLR_GREEN   "\033[32m"
+#define CLR_YELLOW  "\033[33m"
+#define CLR_BLUE    "\033[34m"
+#define CLR_MAGENTA "\033[35m"
+#define CLR_CYAN    "\033[36m"
 
 #define RELEASE "1.19"
 
@@ -31,39 +49,50 @@ using namespace std;
 
 // ------------------------------------------------------------------------------------------
 
+/* 
+ * Print a detailed and colourful usage message for VanitySearch.  This
+ * function has been reworked to include a version banner, clear headings
+ * and concise option descriptions.  Colours highlight the structure of
+ * the information for easier reading.  After printing the message the
+ * process exits to avoid falling back into the main execution path.
+ */
 void printUsage() {
+  // Banner with version information
+  printf("%s%sVanitySearch v%s%s\n\n", CLR_BOLD, CLR_CYAN, RELEASE, CLR_RESET);
+  // Top level usage line
+  printf("%sUsage:%s VanitySearch [options] [prefix]\n\n", CLR_YELLOW, CLR_RESET);
+  printf("  %s[prefix]%s  Prefix to search (can contain wildcards '?' or '*')\n\n",
+         CLR_GREEN, CLR_RESET);
 
-  printf("VanitySeacrh [-check] [-v] [-u] [-b] [-c] [-gpu] [-stop] [-i inputfile]\n");
-  printf("             [-gpuId gpuId1[,gpuId2,...]] [-g g1x,g1y,[,g2x,g2y,...]]\n");
-  printf("             [-o outputfile] [-m maxFound] [-ps seed] [-s seed] [-t nbThread]\n");
-  printf("             [-nosse] [-r rekey] [-check] [-kp] [-sp startPubKey]\n");
-  printf("             [-rp privkey partialkeyfile] [prefix]\n\n");
-  printf(" prefix: prefix to search (Can contains wildcard '?' or '*')\n");
-  printf(" -v: Print version\n");
-  printf(" -u: Search uncompressed addresses\n");
-  printf(" -b: Search both uncompressed or compressed addresses\n");
-  printf(" -c: Case unsensitive search\n");
-  printf(" -gpu: Enable gpu calculation\n");
-  printf(" -stop: Stop when all prefixes are found\n");
-  printf(" -i inputfile: Get list of prefixes to search from specified file\n");
-  printf(" -o outputfile: Output results to the specified file\n");
-  printf(" -gpu gpuId1,gpuId2,...: List of GPU(s) to use, default is 0\n");
-  printf(" -g g1x,g1y,g2x,g2y, ...: Specify GPU(s) kernel gridsize, default is 8*(MP number),128\n");
-  printf(" -m: Specify maximun number of prefixes found by each kernel call\n");
-  printf(" -s seed: Specify a seed for the base key, default is random\n");
-  printf(" -ps seed: Specify a seed concatened with a crypto secure random seed\n");
-  printf(" -t threadNumber: Specify number of CPU thread, default is number of core\n");
-  printf(" -nosse: Disable SSE hash function\n");
-  printf(" -l: List cuda enabled devices\n");
-  printf(" -check: Check CPU and GPU kernel vs CPU\n");
-  printf(" -cp privKey: Compute public key (privKey in hex hormat)\n");
-  printf(" -ca pubKey: Compute address (pubKey in hex hormat)\n");
-  printf(" -kp: Generate key pair\n");
-  printf(" -rp privkey partialkeyfile: Reconstruct final private key(s) from partial key(s) info.\n");
-  printf(" -sp startPubKey: Start the search with a pubKey (for private key splitting)\n");
-  printf(" -r rekey: Rekey interval in MegaKey, default is disabled\n");
+  // Options section heading
+  printf("%sOptions:%s\n", CLR_YELLOW, CLR_RESET);
+  printf("  %s-v%s        Print the program version\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-u%s        Search uncompressed addresses\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-b%s        Search both uncompressed and compressed addresses\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-c%s        Case-insensitive search\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-gpu%s      Enable GPU calculation\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-stop%s     Stop when all prefixes are found\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-i%s file   Load prefixes from the specified file\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-o%s file   Write found addresses and keys to file\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-gpuId%s ids  Comma separated list of GPU device IDs to use\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-g%s x,y,...  Specify GPU kernel grid sizes (pairs per GPU)\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-m%s value  Maximum number of prefixes found per kernel call\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-s%s seed   Use a deterministic seed for the base key\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-ps%s seed  Use a seed combined with a cryptographically secure random seed\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-t%s n      Number of CPU threads (default: number of cores)\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-nosse%s    Disable SSE hash functions\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-l%s        List CUDA-enabled devices\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-check%s    Validate CPU/GPU kernels against CPU implementation\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-cp%s priv  Compute public key from private key (hex or WIF)\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-ca%s pub   Compute address from public key (hex)\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-kp%s       Generate a key pair from the provided seed\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-rp%s priv file  Reconstruct final private key from partial key info\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-sp%s pub   Start search using the specified public key (split-key mode)\n", CLR_GREEN, CLR_RESET);
+  printf("  %s-r%s value  Rekey interval in MegaKeys (default disabled)\n\n", CLR_GREEN, CLR_RESET);
+
+  // Footer with hint for further help
+  printf("%sExample:%s VanitySearch -gpu -stop 1Test\n\n", CLR_YELLOW, CLR_RESET);
   exit(0);
-
 }
 
 // ------------------------------------------------------------------------------------------
@@ -78,7 +107,7 @@ int getInt(string name,char *v) {
 
   } catch(std::invalid_argument&) {
 
-    printf("Invalid %s argument, number expected\n",name.c_str());
+    printf("%sInvalid %s argument, number expected%s\n", CLR_RED, name.c_str(), CLR_RESET);
     exit(-1);
 
   }
@@ -108,7 +137,7 @@ void getInts(string name,vector<int> &tokens, const string &text, char sep) {
 
   } catch(std::invalid_argument &) {
 
-    printf("Invalid %s argument, number expected\n",name.c_str());
+    printf("%sInvalid %s argument, number expected%s\n", CLR_RED, name.c_str(), CLR_RESET);
     exit(-1);
 
   }
@@ -122,7 +151,7 @@ void parseFile(string fileName, vector<string> &lines) {
   // Get file size
   FILE *fp = fopen(fileName.c_str(), "rb");
   if (fp == NULL) {
-    printf("Error: Cannot open %s %s\n", fileName.c_str(), strerror(errno));
+    printf("%sError: Cannot open %s %s%s\n", CLR_RED, fileName.c_str(), strerror(errno), CLR_RESET);
     exit(-1);
   }
   fseek(fp, 0L, SEEK_END);
@@ -166,7 +195,7 @@ void parseFile(string fileName, vector<string> &lines) {
 void generateKeyPair(Secp256K1 *secp, string seed, int searchMode,bool paranoiacSeed) {
 
   if (seed.length() < 8) {
-    printf("Error: Use a seed of at least 8 characters to generate a key pair\n");
+    printf("%sError: Use a seed of at least 8 characters to generate a key pair%s\n", CLR_RED, CLR_RESET);
     printf("Ex: VanitySearch -s \"A Strong Password\" -kp\n");
     exit(-1);
   }
@@ -175,7 +204,7 @@ void generateKeyPair(Secp256K1 *secp, string seed, int searchMode,bool paranoiac
     seed = seed + Timer::getSeed(32);
 
   if (searchMode == SEARCH_BOTH) {
-    printf("Error: Use compressed or uncompressed to generate a key pair\n");
+    printf("%sError: Use compressed or uncompressed to generate a key pair%s\n", CLR_RED, CLR_RESET);
     exit(-1);
   }
 
@@ -206,7 +235,7 @@ void outputAdd(string outputFile, int addrType, string addr, string pAddr, strin
   if (outputFile.length() > 0) {
     f = fopen(outputFile.c_str(), "a");
     if (f == NULL) {
-      printf("Cannot open %s for writing\n", outputFile.c_str());
+      printf("%sCannot open %s for writing%s\n", CLR_RED, outputFile.c_str(), CLR_RESET);
       f = stdout;
     } else {
       needToClose = true;
@@ -280,33 +309,33 @@ void reconstructAdd(Secp256K1 *secp, string fileName, string outputFile, string 
       case 'B':
         addrType = BECH32; break;
       default:
-        printf("Invalid partialkey info file at line %d\n", i);
-        printf("%s Address format not supported\n", addr.c_str());
+        printf("%sInvalid partialkey info file at line %d%s\n", CLR_RED, i, CLR_RESET);
+        printf("%s%s Address format not supported%s\n", CLR_RED, addr.c_str(), CLR_RESET);
         continue;
       }
 
     } else {
-      printf("Invalid partialkey info file at line %d (\"PubAddress: \" expected)\n",i);
+      printf("%sInvalid partialkey info file at line %d (\"PubAddress: \" expected)%s\n", CLR_RED,i, CLR_RESET);
       exit(-1);
     }
 
     if (lines[i+1].substr(0, 13) == "PartialPriv: ") {
       partialPrivAddr = lines[i+1].substr(13);
     } else {
-      printf("Invalid partialkey info file at line %d (\"PartialPriv: \" expected)\n", i);
+      printf("%sInvalid partialkey info file at line %d (\"PartialPriv: \" expected)%s\n", CLR_RED, i, CLR_RESET);
       exit(-1);
     }
 
     bool partialMode;
     Int partialPrivKey = secp->DecodePrivateKey((char *)partialPrivAddr.c_str(), &partialMode);
     if (privKey.IsNegative()) {
-      printf("Invalid partialkey info file at line %d\n", i);
+      printf("%sInvalid partialkey info file at line %d%s\n", CLR_RED, i, CLR_RESET);
       exit(-1);
     }
 
     if (partialMode != compressed) {
 
-      printf("Warning, Invalid partialkey at line %d (Wrong compression mode, ignoring key)\n", i);
+      printf("%sWarning, Invalid partialkey at line %d (Wrong compression mode, ignoring key)%s\n", CLR_YELLOW, i, CLR_RESET);
       continue;
 
     } else {
@@ -353,8 +382,8 @@ void reconstructAdd(Secp256K1 *secp, string fileName, string outputFile, string 
       CHECK_ADDR();
 
       if (!found) {
-        printf("Unable to reconstruct final key from partialkey line %d\n Addr: %s\n PartKey: %s\n",
-          i, addr.c_str(),partialPrivAddr.c_str());
+        printf("%sUnable to reconstruct final key from partialkey line %d%s\n Addr: %s\n PartKey: %s\n",
+          CLR_RED, i, CLR_RESET, addr.c_str(),partialPrivAddr.c_str());
       }
 
     }
@@ -377,7 +406,7 @@ int main(int argc, char* argv[]) {
 
   // Browse arguments
   if (argc < 2) {
-    printf("Error: No arguments (use -h for help)\n");
+    printf("%sError: No arguments (use -h for help)%s\n", CLR_RED, CLR_RESET);
     exit(-1);
   }
 
@@ -433,7 +462,7 @@ int main(int argc, char* argv[]) {
       g.SetSearchMode(searchMode);
       g.Check(secp);
 #else
-  printf("GPU code not compiled, use -DWITHGPU when compiling.\n");
+      printf("%sGPU code not compiled, use -DWITHGPU when compiling.%s\n", CLR_RED, CLR_RESET);
 #endif
       exit(0);
     } else if (strcmp(argv[a], "-l") == 0) {
@@ -441,7 +470,7 @@ int main(int argc, char* argv[]) {
 #ifdef WITHGPU
       GPUEngine::PrintCudaInfo();
 #else
-  printf("GPU code not compiled, use -DWITHGPU when compiling.\n");
+      printf("%sGPU code not compiled, use -DWITHGPU when compiling.%s\n", CLR_RED, CLR_RESET);
 #endif
       exit(0);
 
@@ -536,7 +565,7 @@ int main(int argc, char* argv[]) {
       prefix.push_back(string(argv[a]));
       a++;
     } else {
-      printf("Unexpected %s argument\n",argv[a]);
+      printf("%sUnexpected %s argument%s\n", CLR_RED, argv[a], CLR_RESET);
       exit(-1);
     }
 
@@ -545,12 +574,12 @@ int main(int argc, char* argv[]) {
   printf("VanitySearch v" RELEASE "\n");
 
   if(gridSize.size()==0) {
-    for (int i = 0; i < gpuId.size(); i++) {
+    for (int i = 0; i < (int)gpuId.size(); i++) {
       gridSize.push_back(-1);
       gridSize.push_back(128);
     }
-  } else if(gridSize.size() != gpuId.size()*2) {
-    printf("Invalid gridSize or gpuId argument, must have coherent size\n");
+  } else if(gridSize.size() != (int)gpuId.size()*2) {
+    printf("%sInvalid gridSize or gpuId argument, must have coherent size%s\n", CLR_RED, CLR_RESET);
     exit(-1);
   }
 
